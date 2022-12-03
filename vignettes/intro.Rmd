@@ -1,0 +1,138 @@
+---
+title: "Introduction to StatComp22072"
+author: "Guohui Jiang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to StatComp22072}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+__StatComp22072__ is a simple R package developed to display all previous homwork for the 'Statistical Computing' course and three self compiled functions including two R functions and one Rcpp function. These functions are considered, namely, _CVM.TEST_ (a two-sample Cramer-von Mises test for equal distributions as a permutation test), _q.test_interval_ (perform a quantile test and generate a confidence interval for the two.sided test) and _f18_(generate random nubers using Gibbs sampler).
+
+## Introduction for R function CVM.TEST
+
+The R function **CVM.TEST** could be used to a two-sample Cramer-von Mises test for equal distributions.
+
+The statistical theory of functions are as follows. The Cramer-von Mises statistics is
+$$\small W_2 = \displaystyle\frac{mn}{(m+n)^2} \left[\sum_{i=1}^{n}(F_n(x_i)-G_m(x_i))^2+\sum_{j=1}^{m}(F_n(y_i)-G_m(y_j))^2\right]$$
+where $\small F_n$ is the ecdf of the sample $\small x_1,\cdots,x_n$ and $G_m$ is the ecdf of the sample $\small y_1,\cdots,y_m$.
+
+The source R code for **CVM.TEST** is as follows:
+```{r,eval=FALSE}
+CVM.TEST <- function(x, y, R) {
+  n <- length(x)
+  m <- length(y)
+  z <- c(x, y)
+  N <- n + m
+  Fn <- Gm <- numeric(N)
+  cvm <- numeric(R)
+  for (i in 1:N) {
+    Fn[i] <- mean(as.integer(z[i] <= x))
+    Gm[i] <- mean(as.integer(z[i] <= y))
+  }
+  cvm0 <- ((n*m)/N) * sum((Fn-Gm)^2)
+  for (j in 1:R) {
+    k <- sample(1:N)
+    Z <- z[k]
+    X <- Z[1:n]
+    Y <- Z[(n + 1):N]
+    for (i in 1:N) {
+      Fn[i] <- mean(as.integer(Z[i] <= X))
+      Gm[i] <- mean(as.integer(Z[i] <= Y))
+    }
+    cvm[j] <- ((n*m)/N) * sum((Fn-Gm)^2)
+  }
+  cvm1 <- c(cvm, cvm0)
+  return(list(statistic = cvm0, p_value = mean(cvm1 >= cvm0)))
+}
+```
+
+A simple example of the R dataset **InsectSprays** is as follows. The R function **CVM.TEST** can help to test whether insects using different insecticides come from the same population.
+
+```{r,eval=FALSE}
+attach(InsectSprays)
+x1 <- as.vector(count[spray == "A"])
+x2 <- as.vector(count[spray == "B"])
+x3 <- as.vector(count[spray == "C"])
+x4 <- as.vector(count[spray == "D"])
+x5 <- as.vector(count[spray == "E"])
+x6 <- as.vector(count[spray == "F"])
+CVM.TEST(x1, x2, 299)
+CVM.TEST(x3, x4, 299)
+```
+
+## Introduction for R function q.test_interval
+
+The R function **q.test_interval** could be used to a quantile test for three cases including **two.sided**, **left.sided** and **right.sided**. In addition, it could be used to generate a confidence interval for the two.sided quantile test for users.
+
+The statistical theory of functions are as follows. In quantile test, our statistics $\small T_1$ and $\small T_2$ respectively represents the number of observations less than or equal to $\small x_0$ and less than $\small x_0$.
+
+The source R code for **q.test_interval** is as follows:
+```{r,eval=FALSE}
+q.test_interval <-function(x,xstar=0,quant=.5,alternative="two.sided",conf.level=NULL){
+  n<-length(x)
+  p<-quant
+  T1<-sum(x<=xstar)
+  T2<-sum(x< xstar)
+  if (alternative=="left.side"){
+    p.value<-1-pbinom(T2-1,n,p)
+    r <- s <- clo <- chi <- NULL
+  }
+  if (alternative=="right.side"){
+    p.value<-pbinom(T1,n,p)
+    r <- s <- clo <- chi <- NULL
+  }
+  if (alternative=="two.side"){
+    p.value<-2*min(1-pbinom(T2-1,n,p),pbinom(T1,n,p))
+    alpha<-1-conf.level
+    r <- qbinom(alpha/2,n,p)
+    rmin1<-r-1
+    alpha1<-pbinom(rmin1,n,p)
+    s <- qbinom(1-alpha/2,n,p)+1
+    smin1 <- s-1
+    alpha2<-1-pbinom(smin1,n,p)
+    clo<-sort(x)[r]
+    chi<-sort(x)[s]
+    conf.level<-1-alpha1-alpha2
+  }
+  list(T1=T1,T2=T2,p.value=p.value,conf.level=conf.level,conf.interval=c(clo,chi))
+}
+```
+
+A simple example for using R function **q.test_interval** is as follows.
+```{r,eval=FALSE}
+x<-c(199,213,202,193,174,166,248,189,233,195,160,212,176,231,185)
+q.test_interval(x,xstar=193,quant=0.75,conf.level=0.9,alternative="two.side")
+q.test_interval(x,xstar=193,quant=0.75,conf.level=0.9,alternative="left.side")
+q.test_interval(x,xstar=193,quant=0.75,conf.level=0.9,alternative="right.side")
+```
+
+## Introduction for Rcpp function f18
+
+The Rcpp function **f18** could be used to generate a distribution density (or probability quality function), distribution function and quantile function for the standard normal distribution.
+
+The source R code for **f18** is as follows:
+```{r,eval=FALSE}
+List f18(){
+  NumericVector x = 
+    NumericVector::create(0, 1.96, 2.58);
+  NumericVector p = 
+    NumericVector::create(0.95, 0.975, 0.995);
+  NumericVector y1 = dnorm(x, 0.0, 1.0);
+  NumericVector y2 = pnorm(x, 0.0, 1.0);
+  NumericVector y3 = qnorm(p, 0.0, 1.0);
+  return List::create(Named("y1")=y1,
+                      Named("y2")=y2, Named("y3")=y3);
+}
+```
+
+A simple example for using Rcpp function **f18** is as follows.
+```{r,eval=FALSE}
+f18()
+```
+
+**This is the end of the document. Thanks for your reading and suggestions!**

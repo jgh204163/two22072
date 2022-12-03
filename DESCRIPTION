@@ -1,0 +1,17 @@
+Package: StatComp22072
+Type: Package
+Title: Homework for 'Statistics Computing' course
+Version: 1.0
+Date: 2022-12-01
+Author: Guohui Jiang
+Maintainer: Guohui Jiang <13625673575@126.com>
+Description: Homework for 'Statistics Computing' course and Several R and Rcpp function are included in this package for display.
+License: GPL (>= 2)
+Imports: knitr, xtable, ggplot2, boot, bootstrap, DAAG, MASS, VGAM, multilevel, bda, Rcpp, microbenchmark
+LinkingTo: Rcpp
+RoxygenNote: 7.2.2
+Encoding: UTF-8
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr
+URL: http://github.com/jgh204163/two22072
+BugReports: http://github.com/jgh204163/two22072/issues
